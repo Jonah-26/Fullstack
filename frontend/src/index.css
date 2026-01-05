@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* Your custom CSS can live here too */
+:root {
+  font-family: system-ui, Arial, sans-serif;
+}
+
