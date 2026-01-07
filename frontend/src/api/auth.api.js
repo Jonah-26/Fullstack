@@ -1,7 +1,6 @@
-import http from "./http";
-
 export const authApi = {
-  login: (payload) => http.post("/auth/login", payload),
-  register: (payload) => http.post("/auth/register", payload),
-  me: () => http.get("/auth/me"),
+  login: (payload) => http.post("/api/auth/login", payload),
+  register: (payload) => http.post("/api/auth/register", payload),
+  me: () => http.get("/api/auth/me"),
 };
+
