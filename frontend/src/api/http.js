@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://fullstack-backend-ew08.onrender.com",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
 });
 
 // ✅ Global no-cache defaults (prevents stale GET caching / 304 issues)
