@@ -1,23 +1,37 @@
 import axios from "axios";
 
+// Base backend URL (NO /api here)
+const BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+// Axios instance with /api applied ONCE
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  baseURL: `${BASE_URL}/api`,
 });
 
-// ✅ Global no-cache defaults (prevents stale GET caching / 304 issues)
+// -----------------------------
+// Global no-cache defaults
+// -----------------------------
 http.defaults.headers.common["Cache-Control"] = "no-cache";
 http.defaults.headers.common["Pragma"] = "no-cache";
 http.defaults.headers.common["Expires"] = "0";
 
+// -----------------------------
+// Request interceptor
+// -----------------------------
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // ✅ Bust cache for ALL GET requests
+  // Bust cache for ALL GET requests
   if ((config.method || "").toLowerCase() === "get") {
-    config.params = { ...(config.params || {}), _t: Date.now() };
+    config.params = {
+      ...(config.params || {}),
+      _t: Date.now(),
+    };
   }
 
   return config;
@@ -25,6 +39,9 @@ http.interceptors.request.use((config) => {
 
 export default http;
 
+// -----------------------------
+// Error helper
+// -----------------------------
 export function getApiErrorMessage(err) {
   return (
     err?.response?.data?.message ||
