@@ -2,6 +2,8 @@ import axios from "axios";
 
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL;
 
+console.log("RUNTIME VITE_API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
+
 if (!RAW_BASE) {
   throw new Error("Missing VITE_API_BASE_URL (check Render env + rebuild).");
 }
