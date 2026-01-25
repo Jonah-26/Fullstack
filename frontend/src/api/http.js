@@ -1,52 +1,33 @@
 import axios from "axios";
 
-// Base backend URL (NO /api here)
-const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL;
 
+if (!RAW_BASE) {
+  throw new Error("Missing VITE_API_BASE_URL (check Render env + rebuild).");
+}
 
-// Axios instance with /api applied ONCE
+// remove trailing slash if present
+const BASE_URL = RAW_BASE.replace(/\/+$/, "");
+
+console.log("✅ API BASE_URL =", BASE_URL);
+
 const http = axios.create({
   baseURL: `${BASE_URL}/api`,
+  timeout: 30000,
 });
 
-// -----------------------------
-// Global no-cache defaults
-// -----------------------------
-http.defaults.headers.common["Cache-Control"] = "no-cache";
-http.defaults.headers.common["Pragma"] = "no-cache";
-http.defaults.headers.common["Expires"] = "0";
-
-// -----------------------------
-// Request interceptor
-// -----------------------------
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  // Bust cache for ALL GET requests
   if ((config.method || "").toLowerCase() === "get") {
-    config.params = {
-      ...(config.params || {}),
-      _t: Date.now(),
-    };
+    config.params = { ...(config.params || {}), _t: Date.now() };
   }
-
   return config;
 });
 
 export default http;
 
-// -----------------------------
-// Error helper
-// -----------------------------
 export function getApiErrorMessage(err) {
-  return (
-    err?.response?.data?.message ||
-    err?.message ||
-    "Request failed. Please try again."
-  );
+  return err?.response?.data?.message || err?.message || "Request failed. Please try again.";
 }
