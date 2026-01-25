@@ -2,57 +2,95 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Admin from "../models/admin.model.js";
 
+function normalizeEmail(email = "") {
+  return String(email).trim().toLowerCase();
+}
+
 function signToken(admin) {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not defined");
+  }
+
   return jwt.sign(
-    { adminId: admin._id, email: admin.email },
+    {
+      adminId: admin._id.toString(),
+      email: admin.email,
+      role: admin.role || "admin",
+    },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
 }
 
-// POST /api/auth/register
+/**
+ * OPTION 2: Open registration for ANY user
+ * - No "secret" required
+ * - Creates a new Admin record (you can rename to User later)
+ *
+ * POST /api/auth/register
+ * Body: { email, password, fullName? }
+ */
 export async function registerAdmin(req, res, next) {
   try {
-    const { email, password, secret } = req.body;
+    const { email, password, fullName } = req.body;
 
-    if (!email || !password || !secret) {
-      return res.status(400).json({ message: "email, password, and secret are required" });
+    const cleanEmail = normalizeEmail(email);
+
+    if (!cleanEmail || !password) {
+      return res.status(400).json({ message: "email and password are required" });
     }
 
-    if (secret !== process.env.ADMIN_REGISTER_SECRET) {
-      return res.status(403).json({ message: "Invalid register secret" });
+    if (String(password).length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    const existing = await Admin.findOne({ email: email.toLowerCase() });
+    const existing = await Admin.findOne({ email: cleanEmail });
     if (existing) {
-      return res.status(409).json({ message: "Admin already exists" });
+      return res.status(409).json({ message: "Email already exists" });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const admin = await Admin.create({ email: email.toLowerCase(), passwordHash });
+
+    // Keep it compatible even if your schema doesn't have these fields
+    const admin = await Admin.create({
+      email: cleanEmail,
+      passwordHash,
+      ...(fullName !== undefined ? { fullName: String(fullName).trim() } : {}),
+      ...(Admin.schema?.path?.("role") ? { role: "user" } : {}),
+    });
 
     const token = signToken(admin);
 
     return res.status(201).json({
-      message: "Admin registered successfully",
+      message: "Registered successfully",
       token,
-      admin: { id: admin._id, email: admin.email },
+      admin: {
+        id: admin._id,
+        email: admin.email,
+        ...(admin.fullName !== undefined ? { fullName: admin.fullName } : {}),
+        ...(admin.role !== undefined ? { role: admin.role } : {}),
+      },
     });
   } catch (err) {
     next(err);
   }
 }
 
-// POST /api/auth/login
+/**
+ * POST /api/auth/login
+ * Body: { email, password }
+ */
 export async function loginAdmin(req, res, next) {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    const cleanEmail = normalizeEmail(email);
+
+    if (!cleanEmail || !password) {
       return res.status(400).json({ message: "email and password are required" });
     }
 
-    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    const admin = await Admin.findOne({ email: cleanEmail });
     if (!admin) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -67,17 +105,32 @@ export async function loginAdmin(req, res, next) {
     return res.json({
       message: "Login successful",
       token,
-      admin: { id: admin._id, email: admin.email },
+      admin: {
+        id: admin._id,
+        email: admin.email,
+        ...(admin.fullName !== undefined ? { fullName: admin.fullName } : {}),
+        ...(admin.role !== undefined ? { role: admin.role } : {}),
+      },
     });
   } catch (err) {
     next(err);
   }
 }
 
-// GET /api/auth/me (protected)
+/**
+ * GET /api/auth/me (protected)
+ * Requires auth middleware that sets req.user
+ */
 export async function me(req, res, next) {
   try {
-    return res.json({ adminId: req.user.adminId, email: req.user.email });
+    // Supports either {adminId,email,role} or {_id,email,role} depending on your middleware
+    const adminId = req.user?.adminId || req.user?._id;
+
+    return res.json({
+      adminId,
+      email: req.user?.email,
+      role: req.user?.role,
+    });
   } catch (err) {
     next(err);
   }
