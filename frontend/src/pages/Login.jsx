@@ -4,6 +4,8 @@ import { authApi } from "../api/auth.api";
 import { useStore } from "../app/store/StoreProvider";
 import { ACTIONS } from "../app/store/actions";
 import { getApiErrorMessage } from "../api/http";
+import { loginUser } from "../api/auth.api";
+
 
 export default function Login() {
   const navigate = useNavigate();
