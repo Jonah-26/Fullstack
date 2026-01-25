@@ -4,8 +4,6 @@ import { authApi } from "../api/auth.api";
 import { useStore } from "../app/store/StoreProvider";
 import { ACTIONS } from "../app/store/actions";
 import { getApiErrorMessage } from "../api/http";
-import { loginUser } from "../api/auth.api";
-
 
 export default function Login() {
   const navigate = useNavigate();
@@ -25,8 +23,16 @@ export default function Login() {
       const res = await authApi.login({ email, password });
       const { token, admin } = res.data;
 
+      if (!token) {
+        throw new Error("No token returned from server");
+      }
+
       localStorage.setItem("token", token);
-      dispatch({ type: ACTIONS.AUTH_SET, payload: { token, admin } });
+
+      dispatch({
+        type: ACTIONS.AUTH_SET,
+        payload: { token, admin },
+      });
 
       navigate("/", { replace: true });
     } catch (err) {
@@ -39,7 +45,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-        <h1 className="text-xl font-semibold text-slate-900">Admin Login</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Login</h1>
 
         {error && (
           <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
@@ -55,6 +61,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
+              autoComplete="email"
               required
             />
           </div>
@@ -66,6 +73,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
+              autoComplete="current-password"
               required
             />
           </div>
